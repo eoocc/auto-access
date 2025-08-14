@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动访问系统管理</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div id="loginPage" class="page active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <i class="fas fa-lock"></i>
+                    <h1>系统登录</h1>
+                    <p>请输入用户名和密码</p>
+                </div>
+                <form id="loginForm">
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-key"></i>
+                        <input type="password" id="password" placeholder="请输入密码" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i>
+                        登录
+                    </button>
+                </form>
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理界面 -->
+    <div id="mainPage" class="page">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-globe"></i>
+                <span>自动访问系统</span>
+            </div>
+            <div class="nav-menu">
+                <button class="nav-item active" data-tab="urls">
+                    <i class="fas fa-link"></i>
+                    URL管理
+                </button>
+                <button class="nav-item" data-tab="logs">
+                    <i class="fas fa-history"></i>
+                    访问日志
+                </button>
+                <button class="nav-item logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    退出登录
+                </button>
+            </div>
+        </nav>
+
+        <!-- URL管理页面 -->
+        <div id="urlsTab" class="tab-content active">
+            <div class="container">
+                <div class="section-header">
+                    <h2><i class="fas fa-link"></i> URL管理</h2>
+                    <button class="btn btn-primary" id="addUrlBtn">
+                        <i class="fas fa-plus"></i>
+                        添加URL
+                    </button>
+                </div>
+
+                <!-- 添加URL表单 -->
+                <div id="addUrlForm" class="form-container" style="display: none;">
+                    <div class="form-card">
+                        <h3><i class="fas fa-plus-circle"></i> 添加新URL</h3>
+                        <form id="urlForm">
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="urlInput">URL地址</label>
+                                    <input type="url" id="urlInput" placeholder="https://example.com" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="intervalInput">访问间隔（分钟）</label>
+                                    <input type="number" id="intervalInput" min="1" value="2" required>
+                                    <small style="color: #666; margin-top: 5px; display: block;">60分钟及以上为24小时访问，少于60分钟为定时访问</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="descriptionInput">备注（可选）</label>
+                                    <input type="text" id="descriptionInput" placeholder="URL备注">
+                                </div>
+                                <div class="input-group">
+                                    <label>状态</label>
+                                    <label class="switch">
+                                        <input type="checkbox" id="enabledInput" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelAddBtn">取消</button>
+                                <button type="submit" class="btn btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- URL列表 -->
+                <div class="urls-list">
+                    <div class="list-header">
+                        <div class="stats-row">
+                            <div class="stat-item">
+                                <span class="stat-number" id="totalUrls">0</span>
+                                <span class="stat-label">总URL数</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="activeUrls">0</span>
+                                <span class="stat-label">活跃URL</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="totalRequests">0</span>
+                                <span class="stat-label">总请求数</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="urlsList" class="urls-container">
+                        <!-- URL项目将在这里动态添加 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 访问日志页面 -->
+        <div id="logsTab" class="tab-content">
+            <div class="container">
+                <div class="section-header">
+                    <h2><i class="fas fa-history"></i> 访问日志</h2>
+                    <div class="log-controls">
+                        <button class="btn btn-secondary" id="refreshLogsBtn">
+                            <i class="fas fa-sync"></i>
+                            刷新
+                        </button>
+                        <button class="btn btn-danger" id="clearLogsBtn">
+                            <i class="fas fa-trash"></i>
+                            清空日志
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 日志过滤器 -->
+                <div class="log-filters">
+                    <div class="filter-group">
+                        <label for="dateFilter">日期过滤</label>
+                        <input type="date" id="dateFilter">
+                    </div>
+                    <div class="filter-group">
+                        <label for="statusFilter">状态过滤</label>
+                        <select id="statusFilter">
+                            <option value="">全部</option>
+                            <option value="success">成功</option>
+                            <option value="error">错误</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="urlFilter">URL过滤</label>
+                        <input type="text" id="urlFilter" placeholder="输入URL关键词">
+                    </div>
+                </div>
+
+                <!-- 日志列表 -->
+                <div id="logsList" class="logs-container">
+                    <!-- 日志条目将在这里动态添加 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirmTitle">确认操作</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">确定要执行此操作吗？</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="confirmCancel">取消</button>
+                <button class="btn btn-primary" id="confirmOk">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="notification">
+        <div class="notification-content">
+            <i class="notification-icon"></i>
+            <span class="notification-message"></span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
