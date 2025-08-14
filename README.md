@@ -3,12 +3,13 @@
 一个基于Node.js的自动化网站访问系统，支持24小时访问和定时访问模式。
 
 ## 功能特性
-
+自动化网站访问系统，支持24小时访问和定时访问模式
 - 🔐 用户认证系统
 - 🌐 支持单个和批量添加URL
-- ⏰ 两种访问模式：24小时访问和定时访问（1:00-6:00暂停）
+- ⏰ 两种访问模式：24小时访问(每2分钟访问一次)和定时访问（1:00-6:00暂停，其他时间每2分钟访问一次）
 - 📊 实时访问日志和统计
 - 🔔 Telegram错误提醒（可选）
+- 🌐 模拟真实浏览器访问
 - 📱 响应式Web界面
 
 ## 安装和运行
@@ -88,18 +89,63 @@ TG_CHAT_ID=your_chat_id_here
 - 💬 详细错误信息
 - ⏰ 发生时间
 
+## API接口
+
+### 添加URL
+
+#### 单个添加
+```http
+POST /api/urls
+Content-Type: application/json
+
+{
+  "url": "https://example.com",
+  "name": "示例网站",
+  "type": "24h"
+}
+```
+
+**参数说明：**
+- `url`: 要访问的网站地址（必需）
+- `name`: 网站名称或备注（必需）
+- `type`: 访问模式，可选值：`"24h"`（24小时访问）或 `"scheduled"`（定时访问）
+
+#### 批量添加
+```http
+POST /api/urls/batch
+Content-Type: application/json
+
+{
+  "urls": [
+    {
+      "url": "https://example1.com",
+      "name": "网站1",
+      "type": "24h"
+    },
+    {
+      "url": "https://example2.com",
+      "name": "网站2",
+      "type": "scheduled"
+    }
+  ]
+}
+```
+
+### 删除URL
+
+```http
+DELETE /api/urls/:id
+```
+
+**参数说明：**
+- `id`: 要删除的URL的ID（路径参数）
+
 ## 注意事项
 
 1. 确保目标网站允许自动化访问
 2. 建议设置合理的访问间隔，避免对目标服务器造成压力
 3. Telegram提醒需要网络能够访问Telegram API
 4. 系统会自动保存访问日志，定期清理72小时前的数据
-
-## 技术架构
-
-- **后端**：Node.js + Express
-- **前端**：原生JavaScript + HTML + CSS
-- **定时任务**：node-cron
-- **时间处理**：moment-timezone
-- **HTTP客户端**：axios
-- **数据存储**：JSON文件
+5. 所有API请求（除登录外）都需要先进行身份认证
+6. 批量添加URL时，系统会自动生成唯一的整数ID
+7. 系统访问网站时会自动带上真实的浏览器User-Agent，提高访问成功率
