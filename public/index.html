@@ -267,6 +267,33 @@
                              </div>
                          </div>
                          
+                         <!-- Telegram推送控制 -->
+                         <div class="telegram-control-card">
+                             <div class="control-header">
+                                 <h3><i class="fas fa-bell"></i> 推送控制</h3>
+                             </div>
+                             <div class="control-content">
+                                 <div class="control-item">
+                                     <span class="control-label">错误提醒推送:</span>
+                                     <div class="control-actions">
+                                         <button class="btn btn-success" id="enablePushBtn" style="display: none;">
+                                             <i class="fas fa-play"></i> 启用推送
+                                         </button>
+                                         <button class="btn btn-warning" id="disablePushBtn" style="display: none;">
+                                             <i class="fas fa-pause"></i> 暂停推送
+                                         </button>
+                                         <span class="control-status" id="controlStatus">检查中...</span>
+                                     </div>
+                                 </div>
+                                 <div class="control-description">
+                                     <small style="color: #2c2b2b;">
+                                         <i class="fas fa-info-circle"></i>
+                                         暂停推送后，系统仍会记录错误日志，但不会发送Telegram提醒消息
+                                     </small>
+                                 </div>
+                             </div>
+                         </div>
+                         
                          <!-- Telegram配置表单 -->
                          <div class="telegram-config-card">
                              <div class="config-header">

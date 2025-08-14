@@ -107,6 +107,18 @@ class ApiClient {
             method: 'POST'
         });
     }
+
+    async enableTelegramPush() {
+        return this.request('/api/telegram/enable', {
+            method: 'POST'
+        });
+    }
+
+    async disableTelegramPush() {
+        return this.request('/api/telegram/disable', {
+            method: 'POST'
+        });
+    }
 }
 
 // 应用状态管理
@@ -202,6 +214,8 @@ class AppState {
         const telegramConfigForm = document.getElementById('telegramConfigForm');
         const clearTelegramConfigBtn = document.getElementById('clearTelegramConfigBtn');
         const refreshTelegramStatusBtn = document.getElementById('refreshTelegramStatusBtn');
+        const enablePushBtn = document.getElementById('enablePushBtn');
+        const disablePushBtn = document.getElementById('disablePushBtn');
 
         if (telegramConfigForm) {
             telegramConfigForm.addEventListener('submit', this.handleTelegramConfigSubmit.bind(this));
@@ -211,6 +225,12 @@ class AppState {
         }
         if (refreshTelegramStatusBtn) {
             refreshTelegramStatusBtn.addEventListener('click', this.refreshTelegramStatus.bind(this));
+        }
+        if (enablePushBtn) {
+            enablePushBtn.addEventListener('click', this.handleEnablePush.bind(this));
+        }
+        if (disablePushBtn) {
+            disablePushBtn.addEventListener('click', this.handleDisablePush.bind(this));
         }
 
         // 模态框相关
@@ -958,7 +978,9 @@ class AppState {
     // Telegram配置相关方法
     async refreshTelegramStatus() {
         try {
+            console.log('正在获取Telegram状态...');
             const status = await this.api.getTelegramStatus();
+            console.log('获取到的Telegram状态:', status);
             this.updateTelegramStatus(status);
         } catch (error) {
             console.error('获取Telegram状态失败:', error);
@@ -967,13 +989,34 @@ class AppState {
     }
 
     updateTelegramStatus(status) {
+        console.log('正在更新Telegram状态UI，状态数据:', status);
+        
         const telegramStatus = document.getElementById('telegramStatus');
+        const pushStatus = document.getElementById('pushStatus');
         const chatIdStatus = document.getElementById('chatIdStatus');
         const botTokenStatus = document.getElementById('botTokenStatus');
+        const enablePushBtn = document.getElementById('enablePushBtn');
+        const disablePushBtn = document.getElementById('disablePushBtn');
+        const controlStatus = document.getElementById('controlStatus');
+
+        console.log('找到的DOM元素:', {
+            telegramStatus: !!telegramStatus,
+            pushStatus: !!pushStatus,
+            chatIdStatus: !!chatIdStatus,
+            botTokenStatus: !!botTokenStatus,
+            enablePushBtn: !!enablePushBtn,
+            disablePushBtn: !!disablePushBtn,
+            controlStatus: !!controlStatus
+        });
 
         if (telegramStatus) {
             telegramStatus.textContent = status.enabled ? '已启用' : '未启用';
             telegramStatus.className = `status-value ${status.enabled ? 'enabled' : 'disabled'}`;
+        }
+
+        if (pushStatus) {
+            pushStatus.textContent = status.pushEnabled ? '已启用' : '已暂停';
+            pushStatus.className = `status-value ${status.pushEnabled ? 'enabled' : 'disabled'}`;
         }
 
         if (chatIdStatus) {
@@ -984,6 +1027,39 @@ class AppState {
         if (botTokenStatus) {
             botTokenStatus.textContent = status.hasBotToken ? '已设置' : '未设置';
             botTokenStatus.className = `status-value ${status.hasBotToken ? 'enabled' : 'disabled'}`;
+        }
+
+        // 更新推送控制按钮
+        if (enablePushBtn && disablePushBtn && controlStatus) {
+            console.log('推送控制按钮状态更新:', {
+                enabled: status.enabled,
+                pushEnabled: status.pushEnabled
+            });
+            
+            if (status.enabled) {
+                // Telegram已配置，显示推送控制
+                if (status.pushEnabled) {
+                    // 推送已启用，显示暂停按钮
+                    enablePushBtn.style.display = 'none';
+                    disablePushBtn.style.display = 'inline-block';
+                    controlStatus.textContent = '推送已启用';
+                    controlStatus.className = 'control-status enabled';
+                } else {
+                    // 推送已暂停，显示启用按钮
+                    enablePushBtn.style.display = 'inline-block';
+                    disablePushBtn.style.display = 'none';
+                    controlStatus.textContent = '推送已暂停';
+                    controlStatus.className = 'control-status disabled';
+                }
+            } else {
+                // Telegram未配置，隐藏推送控制
+                enablePushBtn.style.display = 'none';
+                disablePushBtn.style.display = 'none';
+                controlStatus.textContent = '需要先配置Telegram';
+                controlStatus.className = 'control-status checking';
+            }
+        } else {
+            console.log('推送控制按钮元素未找到');
         }
     }
 
@@ -1042,6 +1118,40 @@ class AppState {
                 } catch (error) {
                     console.error('清除Telegram配置失败:', error);
                     this.showNotification('error', '清除失败: ' + error.message);
+                }
+            }
+        );
+    }
+
+    async handleEnablePush() {
+        try {
+            await this.api.enableTelegramPush();
+            this.showNotification('success', 'Telegram推送已启用');
+            
+            // 刷新状态
+            await this.refreshTelegramStatus();
+            
+        } catch (error) {
+            console.error('启用推送失败:', error);
+            this.showNotification('error', '启用失败: ' + error.message);
+        }
+    }
+
+    async handleDisablePush() {
+        this.showConfirmModal(
+            '暂停Telegram推送',
+            '确定要暂停Telegram推送吗？暂停后系统仍会记录错误日志，但不会发送提醒消息。',
+            async () => {
+                try {
+                    await this.api.disableTelegramPush();
+                    this.showNotification('success', 'Telegram推送已暂停');
+                    
+                    // 刷新状态
+                    await this.refreshTelegramStatus();
+                    
+                } catch (error) {
+                    console.error('暂停推送失败:', error);
+                    this.showNotification('error', '暂停失败: ' + error.message);
                 }
             }
         );

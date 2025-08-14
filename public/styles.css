@@ -1335,3 +1335,75 @@ input:checked + .slider:before {
     margin: 0;
     font-weight: 500;
 }
+
+/* Telegram推送控制样式 */
+.telegram-control-card {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.control-header {
+    background: var(--warning-color);
+    color: var(--gray-800);
+    padding: 1rem 1.5rem;
+    margin: 0;
+}
+
+.control-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.control-content {
+    padding: 1.5rem;
+}
+
+.control-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.control-item:last-child {
+    border-bottom: none;
+}
+
+.control-label {
+    font-weight: 500;
+    color: var(--gray-700);
+    font-size: 1rem;
+}
+
+.control-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.control-status {
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.control-status.enabled {
+    background: var(--success-color);
+    color: white;
+}
+
+.control-status.disabled {
+    background: var(--danger-color);
+    color: white;
+}
+
+.control-status.checking {
+    background: var(--warning-color);
+    color: var(--gray-800);
+}
