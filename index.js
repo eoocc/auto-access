@@ -11,7 +11,7 @@ const https = require('https');
 const fs = require('fs');
 
 const app = express();
-const port = process.env.SERVER_PORT || process.env.PORT || 3000;
+const port = process.env.SERVER_PORT || process.env.PORT || 7860;
 
 // 中间件配置
 app.use(cors());
@@ -372,3 +372,4 @@ app.listen(port, () => {
   console.log(`数据存储位置: ${DATA_DIR}`);
   console.log(`username/password: ${USERNAME}/${PASSWORD}`);
 });
+
