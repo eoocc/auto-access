@@ -11,7 +11,7 @@ const https = require('https');
 const fs = require('fs');
 
 const app = express();
-const port = process.env.SERVER_PORT || process.env.PORT || 7860;
+const port = process.env.SERVER_PORT || process.env.PORT || 3000;
 
 // 中间件配置
 app.use(cors());
@@ -29,6 +29,11 @@ app.use(session({
 const USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
+// Telegram配置
+const TG_CHAT_ID = process.env.TG_CHAT_ID || '';
+const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || '';
+const TG_ENABLED = TG_CHAT_ID && TG_BOT_TOKEN;
+
 // 数据文件路径
 const DATA_DIR = path.join(__dirname, 'data');
 const URLS_FILE = path.join(DATA_DIR, 'urls.json');
@@ -37,7 +42,7 @@ const LOGS_FILE = path.join(DATA_DIR, 'logs.json');
 // 确保数据目录存在
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+} 
 
 // 存储URL和日志的数据结构
 let urls = [];
@@ -172,6 +177,31 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
 
+// 发送Telegram消息
+async function sendTelegramMessage(message) {
+  // 动态检查配置状态
+  const currentChatId = global.TG_CHAT_ID || TG_CHAT_ID;
+  const currentBotToken = global.TG_BOT_TOKEN || TG_BOT_TOKEN;
+  const currentEnabled = currentChatId && currentBotToken;
+  
+  if (!currentEnabled) {
+    console.log('Telegram未配置，跳过消息发送');
+    return;
+  }
+  
+  try {
+    const telegramUrl = `https://api.telegram.org/bot${currentBotToken}/sendMessage`;
+    await axios.post(telegramUrl, {
+      chat_id: currentChatId,
+      text: message,
+      parse_mode: 'HTML'
+    });
+    console.log('Telegram消息发送成功');
+  } catch (error) {
+    console.error('发送Telegram消息失败:', error.message);
+  }
+}
+
 // 访问网站函数
 async function visitWebsite(url, type) {
   try {
@@ -184,7 +214,21 @@ async function visitWebsite(url, type) {
     } else {
       errorStatus = error.code;
     }
+    
+    // 记录错误日志
     logAccess(url, errorStatus, type, error.message);
+    
+    // 发送Telegram错误提醒
+    if (TG_ENABLED) {
+      const errorMessage = `🚨 <b>URL访问错误提醒</b>\n\n` +
+        `🔗 <b>URL:</b> ${url}\n` +
+        `📊 <b>访问模式:</b> ${type === '24h' ? '24小时访问' : '定时访问'}\n` +
+        `❌ <b>错误状态:</b> ${errorStatus}\n` +
+        `💬 <b>错误信息:</b> ${error.message}\n` +
+        `⏰ <b>时间:</b> ${moment().tz('Asia/Hong_Kong').format('YYYY-MM-DD HH:mm:ss')}`;
+      
+      await sendTelegramMessage(errorMessage);
+    }
   }
 }
 
@@ -195,12 +239,12 @@ cron.schedule('*/2 * * * *', () => {
   });
 });
 
-// 定时访问（01:00-05:00暂停）
+// 定时访问（01:00-06:00暂停）
 function checkAndSetTimer() {
   const currentMoment = moment().tz('Asia/Hong_Kong');
-  if (currentMoment.hours() >= 1 && currentMoment.hours() < 5) {
+  if (currentMoment.hours() >= 1 && currentMoment.hours() < 6) {
     clearInterval(visitIntervalId);
-    const nextVisitTime = currentMoment.add(0, 'day').hours(5).minutes(0).seconds(0);
+    const nextVisitTime = currentMoment.add(0, 'day').hours(6).minutes(0).seconds(0);
     const nextVisitInterval = nextVisitTime.diff(currentMoment);
     setTimeout(() => {
       startScheduledVisits();
@@ -268,7 +312,7 @@ app.post('/api/urls', requireAuth, (req, res) => {
   }
   
   const newUrl = {
-    id: Date.now(),
+    id: Math.floor(Date.now() + Math.random() * 1000), // 确保ID唯一且为整数
     url: url,
     name: name,
     type: type,
@@ -285,6 +329,60 @@ app.post('/api/urls', requireAuth, (req, res) => {
   saveUrlsData();
   
   res.json({ success: true, url: newUrl });
+});
+
+// 批量添加URL
+app.post('/api/urls/batch', requireAuth, (req, res) => {
+  const { urls: urlList } = req.body;
+  
+  if (!urlList || !Array.isArray(urlList) || urlList.length === 0) {
+    return res.status(400).json({ error: '缺少有效的URL数据' });
+  }
+  
+  const addedUrls = [];
+  const errors = [];
+  
+  for (const urlData of urlList) {
+    const { url, name, type, active = true } = urlData;
+    
+    if (!url || !name || !type) {
+      errors.push(`URL数据不完整: ${JSON.stringify(urlData)}`);
+      continue;
+    }
+    
+    const newUrl = {
+      id: Math.floor(Date.now() + Math.random() * 1000), // 确保ID唯一且为整数
+      url: url,
+      name: name,
+      type: type,
+      active: active
+    };
+    
+    if (type === '24h') {
+      urls.push(newUrl);
+    } else if (type === 'scheduled') {
+      scheduledUrls.push(newUrl);
+    }
+    
+    addedUrls.push(newUrl);
+  }
+  
+  if (errors.length > 0) {
+    return res.status(400).json({ 
+      error: '部分URL添加失败', 
+      errors: errors,
+      added: addedUrls 
+    });
+  }
+  
+  // 保存数据到文件
+  saveUrlsData();
+  
+  res.json({ 
+    success: true, 
+    message: `成功批量添加 ${addedUrls.length} 个URL`,
+    urls: addedUrls 
+  });
 });
 
 // 删除URL
@@ -347,6 +445,64 @@ app.delete('/api/logs', requireAuth, (req, res) => {
   res.json({ success: true, message: '日志已清空' });
 });
 
+// 获取Telegram配置状态
+app.get('/api/telegram/status', requireAuth, (req, res) => {
+  res.json({
+    enabled: TG_ENABLED,
+    hasChatId: !!TG_CHAT_ID,
+    hasBotToken: !!TG_BOT_TOKEN
+  });
+});
+
+// 设置Telegram配置
+app.post('/api/telegram/config', requireAuth, (req, res) => {
+  const { chatId, botToken } = req.body;
+  
+  if (!chatId || !botToken) {
+    return res.status(400).json({ error: 'Chat ID和Bot Token都必须提供' });
+  }
+  
+  // 更新全局变量
+  global.TG_CHAT_ID = chatId;
+  global.TG_BOT_TOKEN = botToken;
+  global.TG_ENABLED = true;
+  
+  // 更新当前模块的变量
+  Object.defineProperty(global, 'TG_CHAT_ID', { value: chatId, writable: true });
+  Object.defineProperty(global, 'TG_BOT_TOKEN', { value: botToken, writable: true });
+  
+  // 发送测试消息验证配置
+  const testMessage = `✅ <b>Telegram配置成功</b>\n\n` +
+    `🎯 这是一条测试消息，确认配置已生效\n` +
+    `⏰ 配置时间: ${moment().tz('Asia/Hong_Kong').format('YYYY-MM-DD HH:mm:ss')}`;
+  
+  sendTelegramMessage(testMessage).then(() => {
+    res.json({ 
+      success: true, 
+      message: 'Telegram配置已更新并发送测试消息',
+      enabled: true
+    });
+  }).catch(error => {
+    res.status(500).json({ 
+      error: '配置更新失败: ' + error.message,
+      enabled: false
+    });
+  });
+});
+
+// 清除Telegram配置
+app.post('/api/telegram/clear', requireAuth, (req, res) => {
+  global.TG_CHAT_ID = '';
+  global.TG_BOT_TOKEN = '';
+  global.TG_ENABLED = false;
+  
+  res.json({ 
+    success: true, 
+    message: 'Telegram配置已清除',
+    enabled: false
+  });
+});
+
 // 前端页面路由
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -371,5 +527,10 @@ app.listen(port, () => {
   console.log(`前端页面: http://localhost:${port}`);
   console.log(`数据存储位置: ${DATA_DIR}`);
   console.log(`username/password: ${USERNAME}/${PASSWORD}`);
+  
+  if (TG_ENABLED) {
+    console.log(`✅ Telegram提醒已启用 (Chat ID: ${TG_CHAT_ID})`);
+  } else {
+    console.log(`❌ Telegram提醒未启用 (需要设置 TG_CHAT_ID 和 TG_BOT_TOKEN 环境变量)`);
+  }
 });
-

@@ -14,7 +14,7 @@
             <div class="login-card">
                 <div class="login-header">
                     <i class="fas fa-lock"></i>
-                    <h1>系统登录</h1>
+                    <h1>自动访问系统登录</h1>
                     <p>请输入用户名和密码</p>
                 </div>
                 <form id="loginForm">
@@ -49,10 +49,14 @@
                     <i class="fas fa-link"></i>
                     URL管理
                 </button>
-                <button class="nav-item" data-tab="logs">
-                    <i class="fas fa-history"></i>
-                    访问日志
-                </button>
+                                 <button class="nav-item" data-tab="logs">
+                     <i class="fas fa-history"></i>
+                     访问日志
+                 </button>
+                 <button class="nav-item" data-tab="telegram">
+                     <i class="fas fa-paper-plane"></i>
+                     Telegram配置
+                 </button>
                 <button class="nav-item logout-btn" id="logoutBtn">
                     <i class="fas fa-sign-out-alt"></i>
                     退出登录
@@ -75,16 +79,31 @@
                 <div id="addUrlForm" class="form-container" style="display: none;">
                     <div class="form-card">
                         <h3><i class="fas fa-plus-circle"></i> 添加新URL</h3>
-                        <form id="urlForm">
+                        
+                        <!-- 添加模式切换 -->
+                        <div class="add-mode-toggle">
+                            <button type="button" class="mode-btn active" data-mode="single">
+                                <i class="fas fa-plus"></i> 单个添加
+                            </button>
+                            <button type="button" class="mode-btn" data-mode="batch">
+                                <i class="fas fa-list"></i> 批量添加
+                            </button>
+                        </div>
+                        
+                        <!-- 单个添加表单 -->
+                        <form id="urlForm" class="add-form active">
                             <div class="form-row">
                                 <div class="input-group">
                                     <label for="urlInput">URL地址</label>
                                     <input type="url" id="urlInput" placeholder="https://example.com" required>
                                 </div>
                                 <div class="input-group">
-                                    <label for="intervalInput">访问间隔（分钟）</label>
-                                    <input type="number" id="intervalInput" min="1" value="2" required>
-                                    <small style="color: #666; margin-top: 5px; display: block;">60分钟及以上为24小时访问，少于60分钟为定时访问</small>
+                                    <label for="accessMode">访问模式</label>
+                                    <select id="accessMode" required>
+                                        <option value="24h">24小时访问(每2分钟)</option>
+                                        <option value="scheduled">定时访问（1:00-6:00暂停）</option>
+                                    </select>
+                                    <small style="color: #666; margin-top: 5px; display: block;">选择访问模式</small>
                                 </div>
                             </div>
                             <div class="form-row">
@@ -103,6 +122,43 @@
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" id="cancelAddBtn">取消</button>
                                 <button type="submit" class="btn btn-primary">保存</button>
+                            </div>
+                        </form>
+                        
+                        <!-- 批量添加表单 -->
+                        <form id="batchUrlForm" class="add-form">
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="batchUrlsInput">批量URL地址</label>
+                                                                                 <textarea id="batchUrlsInput" placeholder="每行一个URL，格式：URL|备注（可选）&#10;例如：&#10;https://example1.com|网站1备注&#10;https://example2.com" rows="5" required></textarea>
+                                             <small style="color: #666; margin-top: 5px; display: block;">每行一个URL，用|分隔URL和备注（备注可选）</small>
+                                </div>
+                                <div class="input-group">
+                                    <label for="batchAccessMode">访问模式</label>
+                                    <select id="batchAccessMode" required>
+                                        <option value="24h">24小时访问(每2分钟)</option>
+                                        <option value="scheduled">定时访问（1:00-6:00暂停）</option>
+                                    </select>
+                                    <small style="color: #666; margin-top: 5px; display: block;">批量设置所有URL的访问模式</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>状态</label>
+                                    <label class="switch">
+                                        <input type="checkbox" id="batchEnabledInput" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="input-group">
+                                    <button type="button" class="btn btn-secondary" id="previewBatchBtn">
+                                        <i class="fas fa-eye"></i> 预览
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelAddBtn">取消</button>
+                                <button type="submit" class="btn btn-primary">批量保存</button>
                             </div>
                         </form>
                     </div>
@@ -133,49 +189,136 @@
             </div>
         </div>
 
-        <!-- 访问日志页面 -->
-        <div id="logsTab" class="tab-content">
-            <div class="container">
-                <div class="section-header">
-                    <h2><i class="fas fa-history"></i> 访问日志</h2>
-                    <div class="log-controls">
-                        <button class="btn btn-secondary" id="refreshLogsBtn">
-                            <i class="fas fa-sync"></i>
-                            刷新
-                        </button>
-                        <button class="btn btn-danger" id="clearLogsBtn">
-                            <i class="fas fa-trash"></i>
-                            清空日志
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 日志过滤器 -->
-                <div class="log-filters">
-                    <div class="filter-group">
-                        <label for="dateFilter">日期过滤</label>
-                        <input type="date" id="dateFilter">
-                    </div>
-                    <div class="filter-group">
-                        <label for="statusFilter">状态过滤</label>
-                        <select id="statusFilter">
-                            <option value="">全部</option>
-                            <option value="success">成功</option>
-                            <option value="error">错误</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="urlFilter">URL过滤</label>
-                        <input type="text" id="urlFilter" placeholder="输入URL关键词">
-                    </div>
-                </div>
-
-                <!-- 日志列表 -->
-                <div id="logsList" class="logs-container">
-                    <!-- 日志条目将在这里动态添加 -->
-                </div>
-            </div>
-        </div>
+                                          <!-- 访问日志页面 -->
+                 <div id="logsTab" class="tab-content">
+                     <div class="container">
+                         <div class="section-header">
+                             <h2><i class="fas fa-history"></i> 访问日志</h2>
+                             <div class="log-controls">
+                                 <button class="btn btn-secondary" id="refreshLogsBtn">
+                                     <i class="fas fa-sync"></i>
+                                     刷新
+                                 </button>
+                                 <button class="btn btn-danger" id="clearLogsBtn">
+                                     <i class="fas fa-trash"></i>
+                                     清空日志
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         <!-- 日志过滤器 -->
+                         <div class="log-filters">
+                             <div class="filter-group">
+                                 <label for="dateFilter">日期过滤</label>
+                                 <input type="date" id="dateFilter">
+                             </div>
+                             <div class="filter-group">
+                                 <label for="statusFilter">状态过滤</label>
+                                 <select id="statusFilter">
+                                     <option value="">全部</option>
+                                     <option value="success">成功</option>
+                                     <option value="error">错误</option>
+                                 </select>
+                             </div>
+                             <div class="filter-group">
+                                 <label for="urlFilter">URL过滤</label>
+                                 <input type="text" id="urlFilter" placeholder="输入URL关键词">
+                             </div>
+                         </div>
+                         
+                         <!-- 日志列表 -->
+                         <div id="logsList" class="logs-container">
+                             <!-- 日志条目将在这里动态添加 -->
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Telegram配置页面 -->
+                 <div id="telegramTab" class="tab-content">
+                     <div class="container">
+                         <div class="section-header">
+                             <h2><i class="fas fa-paper-plane"></i> Telegram配置</h2>
+                             <div class="telegram-controls">
+                                 <button class="btn btn-secondary" id="refreshTelegramStatusBtn">
+                                     <i class="fas fa-sync"></i>
+                                     刷新状态
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         <!-- Telegram状态显示 -->
+                         <div class="telegram-status-card">
+                             <div class="status-header">
+                                 <h3><i class="fas fa-info-circle"></i> 当前状态</h3>
+                             </div>
+                             <div class="status-content">
+                                 <div class="status-item">
+                                     <span class="status-label">Telegram提醒:</span>
+                                     <span class="status-value" id="telegramStatus">检查中...</span>
+                                 </div>
+                                 <div class="status-item">
+                                     <span class="status-label">Chat ID:</span>
+                                     <span class="status-value" id="chatIdStatus">检查中...</span>
+                                 </div>
+                                 <div class="status-item">
+                                     <span class="status-label">Bot Token:</span>
+                                     <span class="status-value" id="botTokenStatus">检查中...</span>
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <!-- Telegram配置表单 -->
+                         <div class="telegram-config-card">
+                             <div class="config-header">
+                                 <h3><i class="fas fa-cog"></i> 配置设置</h3>
+                             </div>
+                             <form id="telegramConfigForm" class="telegram-form">
+                                 <div class="form-row">
+                                     <div class="input-group">
+                                         <label for="telegramChatId">Chat ID</label>
+                                         <input type="text" id="telegramChatId" placeholder="例如: 123456789" required>
+                                         <small style="color: #313030; margin-top: 5px; display: block;">
+                                             你的Telegram用户ID或群组ID
+                                         </small>
+                                     </div>
+                                     <div class="input-group">
+                                         <label for="telegramBotToken">Bot Token</label>
+                                         <input type="text" id="telegramBotToken" placeholder="例如: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz" required>
+                                         <small style="color: #313030; margin-top: 5px; display: block;">
+                                             从@BotFather获取的机器人Token
+                                         </small>
+                                     </div>
+                                 </div>
+                                 <div class="form-actions">
+                                     <button type="button" class="btn btn-danger" id="clearTelegramConfigBtn">
+                                         <i class="fas fa-trash"></i> 清除配置
+                                     </button>
+                                     <button type="submit" class="btn btn-primary">
+                                         <i class="fas fa-save"></i> 保存配置
+                                     </button>
+                                 </div>
+                             </form>
+                         </div>
+                         
+                         <!-- 配置说明 -->
+                         <div class="telegram-help-card">
+                             <div class="help-header">
+                                 <h3><i class="fas fa-question-circle"></i> 配置说明</h3>
+                             </div>
+                             <div class="help-content">
+                                 <h4>如何获取Chat ID和Bot Token？</h4>
+                                 <ol>
+                                     <li><strong>创建机器人:</strong> 在Telegram中搜索 @BotFather，发送 /newbot 命令</li>
+                                     <li><strong>获取Token:</strong> 创建成功后，BotFather会发送给你一个token</li>
+                                     <li><strong>获取Chat ID:</strong> 将机器人添加到群组或私聊，发送消息后访问：<br>
+                                         <code>https://api.telegram.org/bot&lt;YOUR_BOT_TOKEN&gt;/getUpdates</code></li>
+                                     <li><strong>找到Chat ID:</strong> 在返回的JSON中找到 chat.id 字段</li>
+                                 </ol>
+                                 <p><strong>注意:</strong> 配置成功后，系统会自动发送一条测试消息确认配置生效。</p>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
     </div>
 
     <!-- 确认对话框 -->
@@ -191,6 +334,25 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="confirmCancel">取消</button>
                 <button class="btn btn-primary" id="confirmOk">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量添加预览对话框 -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-eye"></i> 批量添加预览</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent">
+                    <!-- 预览内容将在这里动态添加 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="previewCancel">返回编辑</button>
+                <button class="btn btn-primary" id="previewConfirm">确认添加</button>
             </div>
         </div>
     </div>

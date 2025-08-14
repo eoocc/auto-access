@@ -117,7 +117,7 @@ body {
 .input-group select,
 .input-group textarea {
     width: 100%;
-    padding: 1rem 1rem 1rem 3rem;
+    padding: 1rem 1rem 1rem 2rem;
     border: 2px solid var(--gray-300);
     border-radius: var(--border-radius);
     font-size: 1rem;
@@ -345,6 +345,50 @@ body {
 
 .form-card h3 i {
     color: var(--primary-color);
+}
+
+/* 添加模式切换 */
+.add-mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    padding-bottom: 1rem;
+}
+
+.mode-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--gray-200);
+    background: white;
+    color: var(--gray-600);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.mode-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+.mode-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* 表单切换 */
+.add-form {
+    display: none;
+}
+
+.add-form.active {
+    display: block;
 }
 
 .form-row {
@@ -602,6 +646,35 @@ input:checked + .slider:before {
 .status-success {
     background: rgba(72, 187, 120, 0.1);
     color: var(--success-color);
+}
+
+/* 访问模式徽章 */
+.mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.url-details.compact .mode-badge {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.mode-24h {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+}
+
+.mode-scheduled {
+    background: rgba(237, 137, 54, 0.1);
+    color: var(--warning-color);
 }
 
 /* 日志控制 */
@@ -1078,4 +1151,187 @@ input:checked + .slider:before {
         padding: 0 !important;
         max-width: none !important;
     }
+}
+
+/* 批量添加相关样式 */
+.input-group textarea {
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+}
+
+/* 预览内容样式 */
+.preview-item {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.preview-item:last-child {
+    margin-bottom: 0;
+}
+
+.preview-url {
+    font-weight: 600;
+    color: var(--primary-color);
+    word-break: break-all;
+    margin-bottom: 0.25rem;
+}
+
+.preview-name {
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: 0.25rem;
+}
+
+.preview-description {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.preview-mode {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.preview-summary {
+    background: var(--primary-color);
+    color: white;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Telegram配置页面样式 */
+.telegram-status-card,
+.telegram-config-card,
+.telegram-help-card {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.status-header,
+.config-header,
+.help-header {
+    background: var(--primary-color);
+    color: white;
+    padding: 1rem 1.5rem;
+    margin: 0;
+}
+
+.status-header h3,
+.config-header h3,
+.help-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.status-content,
+.config-content,
+.help-content {
+    padding: 1.5rem;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.status-value {
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.status-value.enabled {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-value.disabled {
+    background: var(--danger-color);
+    color: white;
+}
+
+.status-value.checking {
+    background: var(--warning-color);
+    color: white;
+}
+
+.telegram-form {
+    margin: 0;
+}
+
+.telegram-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.telegram-form .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.help-content h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.help-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.help-content li {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.help-content code {
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.help-content p {
+    background: var(--warning-color);
+    color: var(--gray-800);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 0;
+    font-weight: 500;
 }

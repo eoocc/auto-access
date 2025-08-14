@@ -59,6 +59,13 @@ class ApiClient {
         });
     }
 
+    async addBatchUrls(urls) {
+        return this.request('/api/urls/batch', {
+            method: 'POST',
+            body: { urls }
+        });
+    }
+
     async deleteUrl(id) {
         return this.request(`/api/urls/${id}`, {
             method: 'DELETE'
@@ -80,6 +87,24 @@ class ApiClient {
     async clearLogs() {
         return this.request('/api/logs', {
             method: 'DELETE'
+        });
+    }
+
+    // Telegram配置相关
+    async getTelegramStatus() {
+        return this.request('/api/telegram/status');
+    }
+
+    async setTelegramConfig(chatId, botToken) {
+        return this.request('/api/telegram/config', {
+            method: 'POST',
+            body: { chatId, botToken }
+        });
+    }
+
+    async clearTelegramConfig() {
+        return this.request('/api/telegram/clear', {
+            method: 'POST'
         });
     }
 }
@@ -135,6 +160,24 @@ class AppState {
             urlForm.addEventListener('submit', this.handleUrlSubmit.bind(this));
         }
 
+        // 批量添加相关
+        const batchUrlForm = document.getElementById('batchUrlForm');
+        if (batchUrlForm) {
+            batchUrlForm.addEventListener('submit', this.handleBatchUrlSubmit.bind(this));
+        }
+
+        // 添加模式切换
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', this.switchAddMode.bind(this));
+        });
+
+        // 批量预览按钮
+        const previewBatchBtn = document.getElementById('previewBatchBtn');
+        if (previewBatchBtn) {
+            previewBatchBtn.addEventListener('click', this.previewBatchUrls.bind(this));
+        }
+
         // 日志相关
         const refreshLogsBtn = document.getElementById('refreshLogsBtn');
         if (refreshLogsBtn) {
@@ -155,6 +198,21 @@ class AppState {
         if (statusFilter) statusFilter.addEventListener('change', this.filterLogs.bind(this));
         if (urlFilter) urlFilter.addEventListener('input', this.debounce(this.filterLogs.bind(this), 300));
 
+        // Telegram配置相关
+        const telegramConfigForm = document.getElementById('telegramConfigForm');
+        const clearTelegramConfigBtn = document.getElementById('clearTelegramConfigBtn');
+        const refreshTelegramStatusBtn = document.getElementById('refreshTelegramStatusBtn');
+
+        if (telegramConfigForm) {
+            telegramConfigForm.addEventListener('submit', this.handleTelegramConfigSubmit.bind(this));
+        }
+        if (clearTelegramConfigBtn) {
+            clearTelegramConfigBtn.addEventListener('click', this.handleClearTelegramConfig.bind(this));
+        }
+        if (refreshTelegramStatusBtn) {
+            refreshTelegramStatusBtn.addEventListener('click', this.refreshTelegramStatus.bind(this));
+        }
+
         // 模态框相关
         const confirmModal = document.getElementById('confirmModal');
         if (confirmModal) {
@@ -167,6 +225,24 @@ class AppState {
             confirmModal.addEventListener('click', (e) => {
                 if (e.target === confirmModal) {
                     this.hideConfirmModal();
+                }
+            });
+        }
+
+        // 预览模态框相关
+        const previewModal = document.getElementById('previewModal');
+        if (previewModal) {
+            const closeBtn = previewModal.querySelector('.modal-close');
+            const cancelBtn = document.getElementById('previewCancel');
+            const confirmBtn = document.getElementById('previewConfirm');
+            
+            if (closeBtn) closeBtn.addEventListener('click', this.hidePreviewModal.bind(this));
+            if (cancelBtn) cancelBtn.addEventListener('click', this.hidePreviewModal.bind(this));
+            if (confirmBtn) confirmBtn.addEventListener('click', this.confirmBatchAdd.bind(this));
+            
+            previewModal.addEventListener('click', (e) => {
+                if (e.target === previewModal) {
+                    this.hidePreviewModal();
                 }
             });
         }
@@ -287,6 +363,11 @@ class AppState {
         if (tabName === 'logs') {
             this.refreshLogs();
         }
+        
+        // 如果切换到Telegram配置页面，刷新状态
+        if (tabName === 'telegram') {
+            this.refreshTelegramStatus();
+        }
     }
 
     showAddUrlForm() {
@@ -304,7 +385,7 @@ class AppState {
         e.preventDefault();
         
         const urlInput = document.getElementById('urlInput');
-        const intervalInput = document.getElementById('intervalInput');
+        const accessMode = document.getElementById('accessMode');
         const descriptionInput = document.getElementById('descriptionInput');
         const enabledInput = document.getElementById('enabledInput');
         const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -314,8 +395,8 @@ class AppState {
         submitBtn.disabled = true;
 
         try {
-            // 根据间隔确定类型
-            const type = parseInt(intervalInput.value) >= 60 ? '24h' : 'scheduled';
+            // 根据选择的访问模式确定类型
+            const type = accessMode.value;
             
             console.log('提交URL数据:', {
                 url: urlInput.value.trim(),
@@ -416,6 +497,15 @@ class AppState {
                                 <span class="status-badge ${url.active ? 'status-active' : 'status-inactive'}">
                                     <i class="fas fa-${url.active ? 'play' : 'pause'}"></i>
                                     ${url.active ? '活跃' : '暂停'}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">访问模式</span>
+                            <span class="detail-value">
+                                <span class="mode-badge ${url.type === '24h' ? 'mode-24h' : 'mode-scheduled'}">
+                                    <i class="fas fa-${url.type === '24h' ? 'clock' : 'calendar-alt'}"></i>
+                                    ${url.type === '24h' ? '24小时' : '定时(1:00-6:00暂停)'}
                                 </span>
                             </span>
                         </div>
@@ -716,6 +806,245 @@ class AppState {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    // 批量添加相关方法
+    switchAddMode(e) {
+        const mode = e.target.dataset.mode;
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        const forms = document.querySelectorAll('.add-form');
+        
+        // 更新按钮状态
+        modeBtns.forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // 切换表单显示
+        forms.forEach(form => form.classList.remove('active'));
+        if (mode === 'single') {
+            document.getElementById('urlForm').classList.add('active');
+        } else {
+            document.getElementById('batchUrlForm').classList.add('active');
+        }
+    }
+
+    previewBatchUrls() {
+        const batchUrlsInput = document.getElementById('batchUrlsInput').value.trim();
+        const batchAccessMode = document.getElementById('batchAccessMode').value;
+        const batchEnabled = document.getElementById('batchEnabledInput').checked;
+        
+        if (!batchUrlsInput) {
+            this.showNotification('error', '请输入要批量添加的URL');
+            return;
+        }
+        
+        const urls = this.parseBatchUrls(batchUrlsInput);
+        if (urls.length === 0) {
+            this.showNotification('error', '没有解析到有效的URL');
+            return;
+        }
+        
+        this.showPreviewModal(urls, batchAccessMode, batchEnabled);
+    }
+
+    parseBatchUrls(input) {
+        const lines = input.split('\n').filter(line => line.trim());
+        const urls = [];
+        
+        for (const line of lines) {
+            const parts = line.split('|').map(part => part.trim());
+            if (parts.length >= 1 && parts[0]) {
+                const url = parts[0];
+                // 格式：URL|备注(可选)
+                // 如果没有备注，从URL生成名称；如果有备注，备注作为名称
+                let name, description;
+                if (parts.length >= 2 && parts[1]) {
+                    // 有备注的情况：备注作为名称，URL作为描述
+                    name = parts[1];
+                    description = url;
+                } else {
+                    // 没有备注的情况：从URL生成名称
+                    try {
+                        const urlObj = new URL(url);
+                        name = urlObj.hostname || 'URL';
+                    } catch {
+                        name = 'URL';
+                    }
+                    description = '';
+                }
+                
+                // 简单的URL验证
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    urls.push({ url, name, description });
+                }
+            }
+        }
+        
+        return urls;
+    }
+
+    showPreviewModal(urls, accessMode, enabled) {
+        const modal = document.getElementById('previewModal');
+        const previewContent = document.getElementById('previewContent');
+        
+        // 存储预览数据
+        this.previewData = { urls, accessMode, enabled };
+        
+        // 生成预览内容
+        let html = `<div class="preview-summary">即将添加 ${urls.length} 个URL</div>`;
+        
+        urls.forEach(item => {
+            html += `
+                <div class="preview-item">
+                    <div class="preview-url">${item.url}</div>
+                    <div class="preview-name">名称: ${item.name}</div>
+                    ${item.description ? `<div class="preview-description">备注: ${item.description}</div>` : ''}
+                    <div class="preview-mode">${accessMode === '24h' ? '24小时访问' : '定时访问'}</div>
+                </div>
+            `;
+        });
+        
+        previewContent.innerHTML = html;
+        modal.classList.add('show');
+    }
+
+    hidePreviewModal() {
+        document.getElementById('previewModal').classList.remove('show');
+        this.previewData = null;
+    }
+
+    async confirmBatchAdd() {
+        if (!this.previewData) {
+            this.showNotification('error', '预览数据丢失，请重新预览');
+            return;
+        }
+        
+        const { urls, accessMode, enabled } = this.previewData;
+        const submitBtn = document.getElementById('previewConfirm');
+        
+        // 显示加载状态
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 添加中...';
+        submitBtn.disabled = true;
+        
+        try {
+            // 准备批量添加的数据
+            const batchData = urls.map(item => ({
+                url: item.url,
+                name: item.name,
+                type: accessMode,
+                active: enabled
+            }));
+            
+            await this.api.addBatchUrls(batchData);
+            
+            await this.loadData(); // 重新加载数据
+            this.hidePreviewModal();
+            this.hideAddUrlForm();
+            this.showNotification('success', `成功批量添加 ${urls.length} 个URL`);
+        } catch (error) {
+            console.error('批量添加URL失败:', error);
+            this.showNotification('error', '批量添加失败: ' + error.message);
+        } finally {
+            // 恢复按钮状态
+            submitBtn.innerHTML = '确认添加';
+            submitBtn.disabled = false;
+        }
+    }
+
+    async handleBatchUrlSubmit(e) {
+        e.preventDefault();
+        this.previewBatchUrls();
+    }
+
+    // Telegram配置相关方法
+    async refreshTelegramStatus() {
+        try {
+            const status = await this.api.getTelegramStatus();
+            this.updateTelegramStatus(status);
+        } catch (error) {
+            console.error('获取Telegram状态失败:', error);
+            this.showNotification('error', '获取Telegram状态失败: ' + error.message);
+        }
+    }
+
+    updateTelegramStatus(status) {
+        const telegramStatus = document.getElementById('telegramStatus');
+        const chatIdStatus = document.getElementById('chatIdStatus');
+        const botTokenStatus = document.getElementById('botTokenStatus');
+
+        if (telegramStatus) {
+            telegramStatus.textContent = status.enabled ? '已启用' : '未启用';
+            telegramStatus.className = `status-value ${status.enabled ? 'enabled' : 'disabled'}`;
+        }
+
+        if (chatIdStatus) {
+            chatIdStatus.textContent = status.hasChatId ? '已设置' : '未设置';
+            chatIdStatus.className = `status-value ${status.hasChatId ? 'enabled' : 'disabled'}`;
+        }
+
+        if (botTokenStatus) {
+            botTokenStatus.textContent = status.hasBotToken ? '已设置' : '未设置';
+            botTokenStatus.className = `status-value ${status.hasBotToken ? 'enabled' : 'disabled'}`;
+        }
+    }
+
+    async handleTelegramConfigSubmit(e) {
+        e.preventDefault();
+        
+        const chatId = document.getElementById('telegramChatId').value.trim();
+        const botToken = document.getElementById('telegramBotToken').value.trim();
+        
+        if (!chatId || !botToken) {
+            this.showNotification('error', '请填写完整的Chat ID和Bot Token');
+            return;
+        }
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 配置中...';
+        submitBtn.disabled = true;
+
+        try {
+            await this.api.setTelegramConfig(chatId, botToken);
+            this.showNotification('success', 'Telegram配置成功！已发送测试消息');
+            
+            // 刷新状态
+            await this.refreshTelegramStatus();
+            
+            // 清空表单
+            e.target.reset();
+            
+        } catch (error) {
+            console.error('Telegram配置失败:', error);
+            this.showNotification('error', '配置失败: ' + error.message);
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    async handleClearTelegramConfig() {
+        this.showConfirmModal(
+            '清除Telegram配置',
+            '确定要清除Telegram配置吗？清除后将无法发送错误提醒。',
+            async () => {
+                try {
+                    await this.api.clearTelegramConfig();
+                    this.showNotification('success', 'Telegram配置已清除');
+                    
+                    // 刷新状态
+                    await this.refreshTelegramStatus();
+                    
+                    // 清空表单
+                    const form = document.getElementById('telegramConfigForm');
+                    if (form) form.reset();
+                    
+                } catch (error) {
+                    console.error('清除Telegram配置失败:', error);
+                    this.showNotification('error', '清除失败: ' + error.message);
+                }
+            }
+        );
     }
 }
 
