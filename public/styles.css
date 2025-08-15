@@ -199,6 +199,16 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
+.btn-warning {
+    background: linear-gradient(135deg, var(--warning-color), #dd6b20);
+    color: white;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
 /* 错误消息 */
 .error-message {
     color: var(--danger-color);
@@ -563,7 +573,7 @@ input:checked + .slider:before {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(0, 0, 0, 0.15);
     position: absolute;
-    left: 50%;
+    left: 60%;
     top: 50%;
     transform: translate(-50%, -50%);
     z-index: 10;
@@ -835,8 +845,9 @@ input:checked + .slider:before {
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-xl);
     width: 90%;
-    max-width: 400px;
+    max-width: 600px;
     animation: modalSlideIn 0.3s ease;
+    margin: auto;
 }
 
 @keyframes modalSlideIn {
@@ -896,6 +907,55 @@ input:checked + .slider:before {
     z-index: 1100;
     transform: translateX(400px);
     transition: var(--transition);
+}
+
+/* 编辑URL模态框特定样式 */
+#editUrlModal .modal-content {
+    max-width: 700px;
+}
+
+#editUrlModal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+#editUrlModal .form-row:last-child {
+    grid-template-columns: 1fr;
+}
+
+#editUrlModal .input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+#editUrlModal .input-group label {
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+#editUrlModal .input-group input,
+#editUrlModal .input-group select {
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+#editUrlModal .input-group input:focus,
+#editUrlModal .input-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#editUrlModal .modal-footer {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 1.5rem;
 }
 
 .notification.show {

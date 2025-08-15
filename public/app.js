@@ -79,6 +79,13 @@ class ApiClient {
         });
     }
 
+    async editUrl(id, url, name, type) {
+        return this.request(`/api/urls/${id}/edit`, {
+            method: 'PUT',
+            body: { url, name, type }
+        });
+    }
+
     // 日志管理
     async getLogs(page = 1, limit = 50) {
         return this.request(`/api/logs?page=${page}&limit=${limit}`);
@@ -245,6 +252,25 @@ class AppState {
             confirmModal.addEventListener('click', (e) => {
                 if (e.target === confirmModal) {
                     this.hideConfirmModal();
+                }
+            });
+        }
+
+        // 编辑URL相关
+        const editUrlModal = document.getElementById('editUrlModal');
+        if (editUrlModal) {
+            const closeBtn = editUrlModal.querySelector('.modal-close');
+            const cancelBtn = document.getElementById('editUrlCancel');
+            const saveBtn = document.getElementById('editUrlSave');
+            
+            if (closeBtn) closeBtn.addEventListener('click', this.hideEditUrlModal.bind(this));
+            if (cancelBtn) cancelBtn.addEventListener('click', this.hideEditUrlModal.bind(this));
+            if (saveBtn) saveBtn.addEventListener('click', this.handleEditUrlSubmit.bind(this));
+            
+            // 点击模态框外部区域关闭
+            editUrlModal.addEventListener('click', (e) => {
+                if (e.target === editUrlModal) {
+                    this.hideEditUrlModal();
                 }
             });
         }
@@ -525,7 +551,7 @@ class AppState {
                             <span class="detail-value">
                                 <span class="mode-badge ${url.type === '24h' ? 'mode-24h' : 'mode-scheduled'}">
                                     <i class="fas fa-${url.type === '24h' ? 'clock' : 'calendar-alt'}"></i>
-                                    ${url.type === '24h' ? '24小时' : '定时(1:00-6:00暂停)'}
+                                    ${url.type === '24h' ? '24小时' : '定时(每2分钟,1:00-6:00暂停)'}
                                 </span>
                             </span>
                         </div>
@@ -535,6 +561,9 @@ class AppState {
                         </div>
                     </div>
                     <div class="url-actions">
+                        <button class="btn btn-warning" onclick="app.editUrl(${url.id})" title="编辑">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button class="btn ${url.active ? 'btn-danger' : 'btn-success'}" 
                                 onclick="app.toggleUrl(${url.id})" 
                                 title="${url.active ? '禁用' : '启用'}">
@@ -1155,6 +1184,80 @@ class AppState {
                 }
             }
         );
+    }
+
+    // 编辑URL相关方法
+    editUrl(id) {
+        // 找到要编辑的URL
+        const allUrls = [...this.urls24h, ...this.urlsScheduled];
+        const url = allUrls.find(u => u.id === id);
+        
+        if (!url) {
+            this.showNotification('error', 'URL不存在');
+            return;
+        }
+
+        // 填充编辑表单
+        document.getElementById('editUrlInput').value = url.url;
+        document.getElementById('editAccessMode').value = url.type;
+        document.getElementById('editDescriptionInput').value = url.name || '';
+
+        // 存储当前编辑的URL ID
+        this.currentEditUrlId = id;
+
+        // 显示编辑模态框
+        this.showEditUrlModal();
+    }
+
+    showEditUrlModal() {
+        const modal = document.getElementById('editUrlModal');
+        if (modal) {
+            modal.classList.add('show');
+        }
+    }
+
+    hideEditUrlModal() {
+        const modal = document.getElementById('editUrlModal');
+        if (modal) {
+            modal.classList.remove('show');
+            this.currentEditUrlId = null;
+        }
+    }
+
+    async handleEditUrlSubmit() {
+        if (!this.currentEditUrlId) {
+            this.showNotification('error', '没有选择要编辑的URL');
+            return;
+        }
+
+        const url = document.getElementById('editUrlInput').value.trim();
+        const type = document.getElementById('editAccessMode').value;
+        const name = document.getElementById('editDescriptionInput').value.trim();
+
+        if (!url) {
+            this.showNotification('error', '请输入URL地址');
+            return;
+        }
+
+        if (!name) {
+            this.showNotification('error', '请输入备注');
+            return;
+        }
+
+        try {
+            await this.api.editUrl(this.currentEditUrlId, url, name, type);
+            this.showNotification('success', 'URL编辑成功');
+            
+            // 刷新URL列表
+            await this.loadData();
+            
+            // 隐藏编辑模态框
+            this.hideEditUrlModal();
+            
+        } catch (error) {
+            console.error('编辑URL失败:', error);
+            this.showNotification('error', '编辑失败: ' + error.message);
+        }
     }
 }
 

@@ -279,14 +279,14 @@ async function visitWebsite(url, type) {
     // 记录错误日志
     logAccess(url, errorStatus, type, error.message);
     
-         // 发送Telegram错误提醒
+     // 发送Telegram错误提醒
      // 动态检查配置状态
      const currentChatId = global.TG_CHAT_ID || TG_CHAT_ID;
      const currentBotToken = global.TG_BOT_TOKEN || TG_BOT_TOKEN;
      const currentEnabled = currentChatId && currentBotToken;
      
      if (currentEnabled) {
-       const errorMessage = `🔗 <b>URL访问错误提醒</b>\n\n` +
+       const errorMessage = `📣 <b>自动访问系统通知</b>\n\n` +
          `🔗 <b>URL:</b> ${url}\n` +
          `📊 <b>访问模式:</b> ${type === '24h' ? '24小时访问' : '定时访问'}\n` +
          `❌ <b>错误状态:</b> ${errorStatus}\n` +
@@ -476,6 +476,62 @@ app.put('/api/urls/:id', requireAuth, (req, res) => {
     url = scheduledUrls.find(u => u.id === id);
     if (url) {
       url.active = active;
+    }
+  }
+  
+  if (url) {
+    // 保存数据到文件
+    saveUrlsData();
+    res.json({ success: true, url: url });
+  } else {
+    res.status(404).json({ error: 'URL不存在' });
+  }
+});
+
+// 编辑URL
+app.put('/api/urls/:id/edit', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { url: newUrl, name, type } = req.body;
+  
+  if (!newUrl || !name || !type) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+  
+  let url = urls.find(u => u.id === id);
+  let wasInUrls = true;
+  
+  if (url) {
+    // 如果类型改变了，需要从原数组移除并添加到新数组
+    if (url.type !== type) {
+      urls = urls.filter(u => u.id !== id);
+      if (type === '24h') {
+        urls.push({ ...url, url: newUrl, name, type });
+      } else {
+        scheduledUrls.push({ ...url, url: newUrl, name, type });
+      }
+    } else {
+      // 类型没变，直接更新
+      url.url = newUrl;
+      url.name = name;
+    }
+  } else {
+    url = scheduledUrls.find(u => u.id === id);
+    wasInUrls = false;
+    
+    if (url) {
+      // 如果类型改变了，需要从原数组移除并添加到新数组
+      if (url.type !== type) {
+        scheduledUrls = scheduledUrls.filter(u => u.id !== id);
+        if (type === '24h') {
+          urls.push({ ...url, url: newUrl, name, type });
+        } else {
+          scheduledUrls.push({ ...url, url: newUrl, name, type });
+        }
+      } else {
+        // 类型没变，直接更新
+        url.url = newUrl;
+        url.name = name;
+      }
     }
   }
   
